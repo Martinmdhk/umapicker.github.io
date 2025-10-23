@@ -1,149 +1,154 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Uma Musume Sélecteur</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uma Musume - Sélecteur d'équipe</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { background: linear-gradient(to bottom right, #fffafc, #ffe6f0); font-family: 'Inter',sans-serif; }
-    .uma-card:hover { transform: scale(1.03); transition: transform 0.15s ease; }
-    aside, section { height: calc(100vh - 100px); overflow-y:auto; }
-    .closeBtn { cursor: pointer; color: #e53e3e; font-weight: bold; }
-  </style>
-</head>
-<body class="min-h-screen flex flex-col">
-  <header class="p-4 text-center text-2xl font-bold text-pink-700">
-    🐎 Uma Musume – Sélecteur
-  </header>
+  <script type="module">
+    // =====================
+    // === CONFIG FIREBASE ==
+    // =====================
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
-  <div id="loginScreen" class="fixed inset-0 bg-white flex items-center justify-center z-50">
-    <div class="p-6 bg-white shadow rounded-lg w-80">
-      <h2 class="text-xl font-semibold mb-4">Choisissez votre équipe</h2>
-      <button id="team1Btn" class="w-full mb-2 p-2 bg-pink-500 text-white rounded">Équipe 1</button>
-      <button id="team2Btn" class="w-full mb-4 p-2 bg-pink-500 text-white rounded">Équipe 2</button>
-      <div id="passwordDiv" class="hidden">
-        <input type="password" id="teamPassword" placeholder="Mot de passe" class="w-full border p-2 rounded mb-2" />
-        <button id="passwordOkBtn" class="w-full p-2 bg-green-500 text-white rounded">Valider</button>
-        <p id="passwordError" class="text-red-600 mt-2 hidden">Mot de passe incorrect</p>
-      </div>
-    </div>
-  </div>
+    // ⚠️ Remplace ci-dessous par ta propre configuration Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCKZBpYvgkTs-273GS9PHV9YIjlX6lIwKI",
+      authDomain: "uma-selector-bdc59.firebaseapp.com",
+      databaseURL: "https://uma-selector-bdc59-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "uma-selector-bdc59",
+      storageBucket: "uma-selector-bdc59.firebasestorage.app",
+      messagingSenderId: "204929164113",
+      appId: "1:204929164113:web:af408125a77c437a3f2970"
+    };
 
-  <main class="flex flex-1 hidden" id="mainContent">
-    <aside class="w-1/3 bg-white/70 border-r border-pink-200 p-4">
-      <h2 class="text-lg font-semibold text-pink-600 mb-3">Liste des Uma</h2>
-      <input type="text" id="searchInput" placeholder="Rechercher…" class="mb-4 w-full border border-pink-200 rounded-lg p-2" />
-      <div id="umaList" class="grid grid-cols-2 gap-3"></div>
-    </aside>
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-    <section class="flex-1 p-6">
-      <h2 class="text-lg font-semibold text-pink-600 mb-3">Sélection</h2>
-      <div class="mb-4">
-        <span class="font-medium">Total score : </span>
-        <span id="totalScore">0</span> <!-- plus de /max ici -->
-      </div>
-      <div id="selectedArea" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
-    </section>
-  </main>
-
-  <script>
+    // =====================
+    // === DONNÉES UMA ===
+    // =====================
     const umas = [
-      { name: "Special Week", img: "https://gametora.com/images/umamusume/characters/thumb/chara_stand_1001_100101.png", score: 5 },
-      { name: "Silence Suzuka", img: "https://gametora.com/images/umamusume/characters/thumb/chara_stand_1002_100201.png", score: 4 },
-      // … toutes les autres uma ici …
+      { name: "Special Week", img: "https://static.wikia.nocookie.net/umamusume/images/8/8e/Special_Week_Portrait.png", score: 5 },
+      { name: "Silence Suzuka", img: "https://static.wikia.nocookie.net/umamusume/images/a/a4/Silence_Suzuka_Portrait.png", score: 4 },
+      { name: "Tokai Teio", img: "https://static.wikia.nocookie.net/umamusume/images/1/12/Tokai_Teio_Portrait.png", score: 5 },
+      { name: "Mejiro McQueen", img: "https://static.wikia.nocookie.net/umamusume/images/7/7f/Mejiro_McQueen_Portrait.png", score: 3 },
+      { name: "Gold Ship", img: "https://static.wikia.nocookie.net/umamusume/images/e/e5/Gold_Ship_Portrait.png", score: 4 },
+      { name: "Daiwa Scarlet", img: "https://static.wikia.nocookie.net/umamusume/images/b/b0/Daiwa_Scarlet_Portrait.png", score: 2 },
+      { name: "Vodka", img: "https://static.wikia.nocookie.net/umamusume/images/6/6d/Vodka_Portrait.png", score: 3 },
+      { name: "Grass Wonder", img: "https://static.wikia.nocookie.net/umamusume/images/9/9c/Grass_Wonder_Portrait.png", score: 1 },
+      { name: "El Condor Pasa", img: "https://static.wikia.nocookie.net/umamusume/images/a/aa/El_Condor_Pasa_Portrait.png", score: 2 },
+      { name: "TM Opera O", img: "https://static.wikia.nocookie.net/umamusume/images/0/07/TM_Opera_O_Portrait.png", score: 1 }
     ];
 
-    let currentTotal = 0;
-    let selectedUmas = [];
+    // =====================
+    // === VARIABLES GLOBALES ===
+    // =====================
     let team = null;
+    let selectedUmas = [];
+    let currentTotal = 0;
 
-    // Elements
+    // =====================
+    // === DOM ===
+    // =====================
     const loginScreen = document.getElementById("loginScreen");
     const mainContent = document.getElementById("mainContent");
-    const team1Btn = document.getElementById("team1Btn");
-    const team2Btn = document.getElementById("team2Btn");
-    const passwordDiv = document.getElementById("passwordDiv");
-    const teamPasswordInput = document.getElementById("teamPassword");
-    const passwordOkBtn = document.getElementById("passwordOkBtn");
-    const passwordError = document.getElementById("passwordError");
-
-    team1Btn.addEventListener("click", () => startTeamLogin("Equipe 1", "toto"));
-    team2Btn.addEventListener("click", () => startTeamLogin("Equipe 2", "toto2"));
-
-    function startTeamLogin(teamName, correctPwd) {
-      team = { name: teamName, pwd: correctPwd };
-      passwordDiv.classList.remove("hidden");
-    }
-
-    passwordOkBtn.addEventListener("click", () => {
-      if (teamPasswordInput.value === team.pwd) {
-        // connexion ok
-        loginScreen.style.display = "none";
-        mainContent.classList.remove("hidden");
-        loadState();
-        renderList();
-      } else {
-        passwordError.classList.remove("hidden");
-      }
-    });
-
     const umaListElem = document.getElementById("umaList");
     const selectedArea = document.getElementById("selectedArea");
     const totalScoreElem = document.getElementById("totalScore");
     const searchInput = document.getElementById("searchInput");
 
+    // =====================
+    // === LOGIN ÉQUIPE ===
+    // =====================
+    const teams = {
+      "Equipe 1": "toto",
+      "Equipe 2": "toto2"
+    };
+
+    document.getElementById("team1Btn").addEventListener("click", () => chooseTeam("Equipe 1"));
+    document.getElementById("team2Btn").addEventListener("click", () => chooseTeam("Equipe 2"));
+
+    function chooseTeam(teamName) {
+      const pwd = prompt(`Mot de passe pour ${teamName}:`);
+      if (pwd === teams[teamName]) {
+        team = teamName;
+        loginScreen.classList.add("hidden");
+        mainContent.classList.remove("hidden");
+        loadData();
+        renderList();
+      } else {
+        alert("Mot de passe incorrect.");
+      }
+    }
+
+    // =====================
+    // === RENDER LISTE UMA ===
+    // =====================
     searchInput.addEventListener("input", () => renderList(searchInput.value));
 
     function renderList(filter = "") {
-      const normFilter = filter.trim().toLowerCase();
       umaListElem.innerHTML = "";
+      const term = filter.trim().toLowerCase();
       umas.forEach(uma => {
-        if (uma.name.toLowerCase().includes(normFilter)) {
+        if (uma.name.toLowerCase().includes(term)) {
           const card = document.createElement("div");
-          card.className = "uma-card bg-white shadow rounded-xl p-2 flex flex-col items-center cursor-pointer hover:shadow-lg";
+          card.className = "bg-white shadow rounded-xl p-2 flex flex-col items-center cursor-pointer hover:shadow-lg";
           card.innerHTML = `
             <img src="${uma.img}" alt="${uma.name}" class="w-20 h-20 object-cover rounded-full mb-2" />
             <p class="text-sm font-medium text-center">${uma.name}</p>
             <p class="text-xs text-gray-500">Score : ${uma.score}</p>
           `;
-          card.addEventListener("click", () => addUmaToSelection(uma));
+          card.addEventListener("click", () => addUma(uma));
           umaListElem.appendChild(card);
         }
       });
     }
 
-    function addUmaToSelection(uma) {
-      // ajout
-      selectedUmas.push(uma);
+    // =====================
+    // === AJOUT UMA ===
+    // =====================
+    function addUma(uma) {
+      const customName = prompt(`Entrez un nom personnalisé pour ${uma.name} :`);
+      if (!customName) return;
+
+      const newUma = { ...uma, customName };
+      selectedUmas.push(newUma);
       currentTotal += uma.score;
       updateTotal();
-      renderSelected();
-
-      saveState();
+      saveData();
     }
 
+    // =====================
+    // === SUPPRESSION UMA ===
+    // =====================
+    function removeUma(index) {
+      const uma = selectedUmas[index];
+      const confirmDelete = confirm(`Supprimer ${uma.customName} (${uma.name}) ?`);
+      if (!confirmDelete) return;
+      currentTotal -= uma.score;
+      selectedUmas.splice(index, 1);
+      updateTotal();
+      saveData();
+    }
+
+    // =====================
+    // === AFFICHAGE SÉLECTION ===
+    // =====================
     function renderSelected() {
       selectedArea.innerHTML = "";
       selectedUmas.forEach((uma, idx) => {
         const card = document.createElement("div");
         card.className = "bg-white shadow-md rounded-2xl p-3 flex flex-col items-center relative";
         card.innerHTML = `
-          <span class="closeBtn absolute top-2 right-2 text-xl">&times;</span>
+          <span class="absolute top-2 right-2 text-xl text-red-500 cursor-pointer">&times;</span>
           <img src="${uma.img}" alt="${uma.name}" class="w-24 h-24 object-cover rounded-full mb-2" />
           <p class="text-sm text-pink-600 font-semibold">${uma.name}</p>
-          <p class="text-xs text-gray-500">Score ajouté: ${uma.score}</p>
-          <input type="text" placeholder="Nom personnalisé…" class="mt-2 w-full border border-pink-200 rounded-lg p-1 text-sm focus:outline-none focus:ring-2 focus:ring-pink-300" />
+          <p class="text-xs text-gray-600 italic">${uma.customName}</p>
+          <p class="text-xs text-gray-400">Score : ${uma.score}</p>
         `;
-        const closeBtn = card.querySelector(".closeBtn");
-        closeBtn.addEventListener("click", () => {
-          // retirer
-          currentTotal -= uma.score;
-          selectedUmas.splice(idx, 1);
-          updateTotal();
-          renderSelected();
-          saveState();
-        });
+        card.querySelector("span").addEventListener("click", () => removeUma(idx));
         selectedArea.appendChild(card);
       });
     }
@@ -152,31 +157,60 @@
       totalScoreElem.textContent = currentTotal;
     }
 
-    // => Persistance (localStorage)
-    function saveState() {
-      const state = {
-        team: team.name,
-        selected: selectedUmas,
+    // =====================
+    // === SAUVEGARDE CLOUD ===
+    // =====================
+    async function saveData() {
+      if (!team) return;
+      await set(ref(db, `teams/${team}`), {
+        selectedUmas,
         total: currentTotal
-      };
-      localStorage.setItem("umaSelectorState", JSON.stringify(state));
+      });
     }
 
-    function loadState() {
-      const raw = localStorage.getItem("umaSelectorState");
-      if (!raw) return;
-      try {
-        const state = JSON.parse(raw);
-        if (state.team === team.name) {
-          selectedUmas = state.selected || [];
-          currentTotal = state.total || 0;
+    function loadData() {
+      if (!team) return;
+      const teamRef = ref(db, `teams/${team}`);
+      onValue(teamRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          selectedUmas = data.selectedUmas || [];
+          currentTotal = data.total || 0;
           renderSelected();
           updateTotal();
         }
-      } catch(e) {
-        console.warn("Erreur chargement état", e);
-      }
+      });
     }
   </script>
+</head>
+<body class="min-h-screen flex flex-col">
+  <header class="p-4 text-center text-2xl font-bold text-pink-700">
+    🐎 Uma Musume – Sélecteur d'équipe
+  </header>
+
+  <!-- Écran de connexion -->
+  <div id="loginScreen" class="fixed inset-0 bg-white flex flex-col items-center justify-center gap-4">
+    <h2 class="text-xl font-semibold">Choisissez votre équipe</h2>
+    <button id="team1Btn" class="px-4 py-2 bg-pink-500 text-white rounded-lg">Équipe 1</button>
+    <button id="team2Btn" class="px-4 py-2 bg-pink-500 text-white rounded-lg">Équipe 2</button>
+  </div>
+
+  <!-- Contenu principal -->
+  <main id="mainContent" class="flex-1 flex hidden">
+    <aside class="w-1/3 bg-white/70 border-r border-pink-200 p-4 overflow-y-auto">
+      <h2 class="text-lg font-semibold text-pink-600 mb-3">Liste des Uma</h2>
+      <input id="searchInput" type="text" placeholder="Rechercher..." class="mb-4 w-full border border-pink-200 rounded-lg p-2" />
+      <div id="umaList" class="grid grid-cols-2 gap-3"></div>
+    </aside>
+
+    <section class="flex-1 p-6 overflow-y-auto">
+      <h2 class="text-lg font-semibold text-pink-600 mb-3">Sélection</h2>
+      <div class="mb-4">
+        <span class="font-medium">Total score :</span>
+        <span id="totalScore">0</span>
+      </div>
+      <div id="selectedArea" class="grid grid-cols-2 md:grid-cols-3 gap-4"></div>
+    </section>
+  </main>
 </body>
 </html>
