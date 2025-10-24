@@ -4,6 +4,62 @@
   <meta charset="UTF-8">
   <title>Uma Musume Team Selector</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+  /* 💖 Style Uma Musume Pastel */
+  body {
+    background: linear-gradient(180deg, #fff5fa 0%, #f9e3ff 100%);
+    font-family: "Nunito", sans-serif;
+  }
+
+  header {
+    background: linear-gradient(90deg, #ff77b7, #f78aff);
+  }
+
+  /* Cartes Uma */
+  #umaList > div, #selectedUmas > div {
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    background: white;
+  }
+  #umaList > div:hover, #selectedUmas > div:hover {
+    transform: translateY(-3px);
+    border-color: #fca5a5;
+    box-shadow: 0 6px 10px rgba(255, 105, 180, 0.2);
+  }
+
+  /* Modales */
+  #teamModal > div, #adminModal > div, #nameModal > div, #deleteModal > div {
+    animation: fadeIn 0.25s ease;
+  }
+
+  @keyframes fadeIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* Boutons ronds */
+  button {
+    transition: all 0.15s ease;
+  }
+  button:hover {
+    transform: scale(1.05);
+  }
+
+  /* Scrollbar personnalisée */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 182, 193, 0.8);
+    border-radius: 8px;
+  }
+
+  /* Admin Panel style */
+  #adminPanel {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(6px);
+  }
+</style>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
