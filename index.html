@@ -164,8 +164,18 @@
     /* === CHARGEMENT INITIAL === */
     async function initApp() {
       // Charger les données Uma
-      const response = await fetch("https://gametora.com/api/umamusume/characters.json");
-      umaList = await response.json();
+      let umaList = [
+      { id: "special-week", name: "Special Week", img: "https://static.wikia.nocookie.net/umamusume/images/8/8e/Special_Week_Portrait.png", score: 5 },
+      { id: "silence-suzuka", name: "Silence Suzuka", img: "https://static.wikia.nocookie.net/umamusume/images/a/a4/Silence_Suzuka_Portrait.png", score: 4 },
+      { id: "tokai-teio", name: "Tokai Teio", img: "https://static.wikia.nocookie.net/umamusume/images/1/12/Tokai_Teio_Portrait.png", score: 5 },
+      { id: "mejiro-mcqueen", name: "Mejiro McQueen", img: "https://static.wikia.nocookie.net/umamusume/images/7/7f/Mejiro_McQueen_Portrait.png", score: 3 },
+      { id: "gold-ship", name: "Gold Ship", img: "https://static.wikia.nocookie.net/umamusume/images/e/e5/Gold_Ship_Portrait.png", score: 4 },
+      { id: "daiwa-scarlet", name: "Daiwa Scarlet", img: "https://static.wikia.nocookie.net/umamusume/images/b/b0/Daiwa_Scarlet_Portrait.png", score: 2 },
+      { id: "vodka", name: "Vodka", img: "https://static.wikia.nocookie.net/umamusume/images/6/6d/Vodka_Portrait.png", score: 3 },
+      { id: "grass-wonder", name: "Grass Wonder", img: "https://static.wikia.nocookie.net/umamusume/images/9/9c/Grass_Wonder_Portrait.png", score: 1 },
+      { id: "el-condor-pasa", name: "El Condor Pasa", img: "https://static.wikia.nocookie.net/umamusume/images/a/aa/El_Condor_Pasa_Portrait.png", score: 2 },
+      { id: "tm-opera-o", name: "TM Opera O", img: "https://static.wikia.nocookie.net/umamusume/images/0/07/TM_Opera_O_Portrait.png", score: 1 }
+      ];
 
       renderUmaList();
 
