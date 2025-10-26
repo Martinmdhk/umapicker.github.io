@@ -314,7 +314,7 @@
         const savedPass = localStorage.getItem('uma_pass');
         if (!currentTeam && savedTeam && savedPass && authData[savedTeam] === savedPass) {
         currentTeam = savedTeam;
-        isAdmin = (adminPass === "Admin");
+        isAdmin = (adminPass === authData["Admin"]);
         hideModal(teamModal);
         hideModal(adminModal);
         showMain();
@@ -361,7 +361,6 @@
     const pass = adminPasswordInput.value;
     if (authData["Admin"] && authData["Admin"] === pass) {
         isAdmin = true;
-        localStorage.setItem('isadmin', "Admin");
         localStorage.setItem('admin_pass', pass);
         hideModal(adminModal);
         showMain();
@@ -379,7 +378,7 @@
     function renderAdminPanel() {
     adminTeamsList.innerHTML = '';
     Object.entries(authData).forEach(([team, pwd]) => {
-        if (isAdmin) return;
+        if (team === "Admin") return;
         const div = document.createElement('div');
         div.className = "flex items-center gap-2 border p-2 rounded";
         div.innerHTML = `
@@ -417,12 +416,12 @@
         adminTeamsList.appendChild(div);
     });
 
-    // ⚙️ Édition des scores Uma (nouvelle section admin)
+    // ⚙️ Section édition des scores Uma (corrigée)
     const umaEditSection = document.createElement('div');
     umaEditSection.className = "mt-4";
     umaEditSection.innerHTML = "<h3 class='text-lg font-bold mb-2'>Scores Uma</h3>";
 
-    umas.forEach(u => {
+    umas.forEach((u, index) => {
         const row = document.createElement('div');
         row.className = "flex items-center gap-2 mb-1";
         row.innerHTML = `
@@ -433,15 +432,16 @@
         row.querySelector('.saveUma').onclick = async () => {
         const newScore = parseInt(row.querySelector('.uma-score-input').value);
         if (isNaN(newScore) || newScore < 1) return;
-        u.score = newScore;
-        await update(ref(db, `/umas/${u.id}`), { score: newScore });
+
+        // ✅ mise à jour locale et sauvegarde du tableau complet
+        umas[index].score = newScore;
+        await set(ref(db, '/umas'), umas);
         showToast(`Score de ${u.name} mis à jour`);
         };
         umaEditSection.appendChild(row);
     });
 
     adminTeamsList.appendChild(umaEditSection);
-
     adminMaxInput.value = maxScore;
     }
 
