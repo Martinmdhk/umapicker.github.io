@@ -164,6 +164,20 @@
     const newTeamName = document.getElementById('newTeamName');
     const newTeamPwd = document.getElementById('newTeamPwd');
 
+    
+    // ---------------------------------------------------------------------------
+    // Toast visuel
+    // ---------------------------------------------------------------------------
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-4 right-4 bg-pink-600 text-white px-4 py-2 rounded-lg shadow-lg opacity-0 transition-opacity';
+    document.body.appendChild(toast);
+    function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.remove('opacity-0');
+    setTimeout(() => toast.classList.add('opacity-0'), 2000);
+    }
+
+
     /* ⚙️ CONFIG FIREBASE — à personnaliser avec tes propres infos */
     const firebaseConfig = {
       apiKey: "AIzaSyCKZBpYvgkTs-273GS9PHV9YIjlX6lIwKI",
@@ -322,9 +336,10 @@
         hideModal(teamModal);
         showMain();
         loadTeam(team);
-      } else {
-        alert("Mot de passe incorrect.");
-      }
+            showToast(`Connecté à ${team}`);
+        } else {
+            showToast("Mot de passe incorrect.");
+        }
     };
     teamCancel.onclick = () => hideModal(teamModal);
 
@@ -339,9 +354,10 @@
         hideModal(adminModal);
         showMain();
         showAdminPanel();
-      } else {
-        alert("Mot de passe incorrect.");
-      }
+        showToast("Mode administrateur activé");
+        } else {
+            showToast("Mot de passe incorrect.");
+        }
     };
     adminCancel.onclick = () => hideModal(adminModal);
 
@@ -349,59 +365,72 @@
     // ADMIN PANEL — affichage & modification des équipes
     // ---------------------------------------------------------------------------
     function renderAdminPanel() {
-      adminTeamsList.innerHTML = '';
-      Object.entries(authData).forEach(([team, pwd]) => {
+    adminTeamsList.innerHTML = '';
+    Object.entries(authData).forEach(([team, pwd]) => {
         if (team === "Admin") return;
         const div = document.createElement('div');
         div.className = "flex items-center gap-2 border p-2 rounded";
         div.innerHTML = `
-          <input type="text" value="${team}" class="team-name flex-1 border rounded p-1" />
-          <input type="password" value="${pwd}" class="team-pass flex-1 border rounded p-1" />
-          <button class="save bg-green-500 text-white px-2 py-1 rounded">💾</button>
+        <input type="text" value="${team}" class="team-name flex-1 border rounded p-1" />
+        <input type="password" value="${pwd}" class="team-pass flex-1 border rounded p-1" />
+        <button class="save bg-green-500 text-white px-2 py-1 rounded">💾</button>
+        <button class="delete bg-red-500 text-white px-2 py-1 rounded">🗑️</button>
         `;
         const saveBtn = div.querySelector('.save');
+        const delBtn = div.querySelector('.delete');
         saveBtn.onclick = async () => {
-          const newName = div.querySelector('.team-name').value.trim();
-          const newPass = div.querySelector('.team-pass').value.trim();
-          if (!newName || !newPass) return;
-          // Supprimer l’ancienne clé et recréer si le nom change
-          if (newName !== team) {
+        const newName = div.querySelector('.team-name').value.trim();
+        const newPass = div.querySelector('.team-pass').value.trim();
+        if (!newName || !newPass) return;
+        if (newName !== team) {
             delete authData[team];
             authData[newName] = newPass;
-          } else {
+        } else {
             authData[team] = newPass;
-          }
-          await update(ref(db, '/auth'), authData);
-          renderAdminPanel();
-          refreshTeamSelect();
+        }
+        await update(ref(db, '/auth'), authData);
+        showToast("Équipe modifiée !");
+        renderAdminPanel();
+        refreshTeamSelect();
+        };
+        delBtn.onclick = async () => {
+        if (!confirm(`Supprimer ${team} ?`)) return;
+        delete authData[team];
+        await update(ref(db, '/auth'), authData);
+        await remove(ref(db, `/teams/${team}`));
+        showToast("Équipe supprimée !");
+        renderAdminPanel();
+        refreshTeamSelect();
         };
         adminTeamsList.appendChild(div);
-      });
-      adminMaxInput.value = maxScore;
+    });
+    adminMaxInput.value = maxScore;
     }
 
     addTeamBtn.onclick = async () => {
-      const name = newTeamName.value.trim();
-      const pass = newTeamPwd.value.trim();
-      if (!name || !pass) return;
-      authData[name] = pass;
-      await update(ref(db, '/auth'), authData);
-      newTeamName.value = '';
-      newTeamPwd.value = '';
-      renderAdminPanel();
-      refreshTeamSelect();
+    const name = newTeamName.value.trim();
+    const pass = newTeamPwd.value.trim();
+    if (!name || !pass) return;
+    authData[name] = pass;
+    await update(ref(db, '/auth'), authData);
+    newTeamName.value = '';
+    newTeamPwd.value = '';
+    showToast("Nouvelle équipe ajoutée !");
+    renderAdminPanel();
+    refreshTeamSelect();
     };
 
     adminMaxInput.onchange = async () => {
-      const newMax = parseInt(adminMaxInput.value);
-      if (!isNaN(newMax)) {
+    const newMax = parseInt(adminMaxInput.value);
+    if (!isNaN(newMax)) {
         maxScore = newMax;
         await update(ref(db, '/settings'), { maxScore: newMax });
-      }
+        showToast("Score max mis à jour !");
+    }
     };
 
-    function showAdminPanel() { showModal(adminPanel); renderAdminPanel(); }
-    closeAdminPanel.onclick = () => hideModal(adminPanel);
+function showAdminPanel() { showModal(adminPanel); renderAdminPanel(); }
+closeAdminPanel.onclick = () => hideModal(adminPanel);
 
     // ---------------------------------------------------------------------------
     // Sauvegarde sélection équipe
@@ -441,13 +470,15 @@
     // Auto-connexion si déjà stockée
     // ---------------------------------------------------------------------------
     initData().then(() => {
-      const saved = localStorage.getItem('uma_team');
-      if (saved && saved !== "Admin" && authData[saved]) {
-        currentTeam = saved;
+    const savedTeam = localStorage.getItem('uma_team');
+    const savedPass = localStorage.getItem('uma_pass');
+    if (savedTeam && savedPass && authData[savedTeam] === savedPass) {
+        currentTeam = savedTeam;
+        isAdmin = (savedTeam === "Admin");
         showMain();
-        loadTeam(saved);
-      } else {
+        if (!isAdmin) loadTeam(currentTeam);
+    } else {
         showModal(teamModal);
-      }
+    }
     });
 </script>
