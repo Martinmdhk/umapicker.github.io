@@ -198,9 +198,9 @@
         selectedUmas.splice(index, 1);
         renderSelected();
         saveData();
-        hideModal(confirmModal);
+        (confirmModal);
       };
-      confirmCancel.onclick = () => hideModal(confirmModal);
+      confirmCancel.onclick = () => (confirmModal);
     }
 
     // RENDU SÉLECTION
@@ -331,14 +331,14 @@ teamLogin.onclick = async () => {
     currentTeam = team;
     isAdmin = false;
     localStorage.setItem('uma_team', team);
-    hideModal(teamModal);
+    (teamModal);
     showMain();
     loadTeam(team);
   } else {
     alert("Mot de passe incorrect.");
   }
 };
-teamCancel.onclick = () => hideModal(teamModal);
+teamCancel.onclick = () => (teamModal);
 
 // ---------------------------------------------------------------------------
 // Connexion ADMIN
@@ -348,14 +348,14 @@ adminLogin.onclick = async () => {
   if (authData["Admin"] && authData["Admin"] === pass) {
     isAdmin = true;
     currentTeam = "Admin";
-    hideModal(adminModal);
+    (adminModal);
     showMain();
     showAdminPanel();
   } else {
     alert("Mot de passe incorrect.");
   }
 };
-adminCancel.onclick = () => hideModal(adminModal);
+adminCancel.onclick = () => (adminModal);
 
 // ---------------------------------------------------------------------------
 // ADMIN PANEL — affichage & modification des équipes
@@ -449,7 +449,6 @@ function showMain() {
   if (!isAdmin) loadTeam(currentTeam);
 }
 
-function showModal(el) { el.classList.remove('hidden', 'opacity-0'); el.classList.add('flex'); }
 function hideModal(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 
 // ---------------------------------------------------------------------------
