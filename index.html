@@ -276,14 +276,6 @@
     // ---------------------------------------------------------------------------
     async function initData() {
       const snapshot = await get(ref(db, '/'));
-      if (!snapshot.exists()) {
-        await set(ref(db, '/'), {
-          auth: { "Equipe 1": "toto", "Equipe 2": "toto2", "Admin": "toto3" },
-          teams: { "Equipe 1": { selected: [], total: 0 }, "Equipe 2": { selected: [], total: 0 } },
-          settings: { maxScore: 30 },
-          umas: []
-        });
-      }
       listenData();
     }
 
@@ -501,19 +493,6 @@ function renderAdminPanel() {
     // --- Score max global ---
     adminMaxInput.value = maxScore;
     }
-
-    addTeamBtn.onclick = async () => {
-    const name = newTeamName.value.trim();
-    const pass = newTeamPwd.value.trim();
-    if (!name || !pass) return;
-    authData[name] = pass;
-    await update(ref(db, '/auth'), authData);
-    newTeamName.value = '';
-    newTeamPwd.value = '';
-    showToast("Nouvelle équipe ajoutée !");
-    renderAdminPanel();
-    refreshTeamSelect();
-    };
 
     adminMaxInput.onchange = async () => {
     const newMax = parseInt(adminMaxInput.value);
