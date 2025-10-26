@@ -265,38 +265,19 @@ const db = getDatabase(app);
 // ---------------------------------------------------------------------------
 // Références DOM
 // ---------------------------------------------------------------------------
-const teamModal = document.getElementById('teamModal');
-const teamSelect = document.getElementById('teamSelect');
-const teamPasswordInput = document.getElementById('teamPasswordInput');
 const teamLogin = document.getElementById('teamLogin');
 const teamCancel = document.getElementById('teamCancel');
-const adminModal = document.getElementById('adminModal');
-const adminPasswordInput = document.getElementById('adminPasswordInput');
 const adminLogin = document.getElementById('adminLogin');
 const adminCancel = document.getElementById('adminCancel');
-const adminPanel = document.getElementById('adminPanel');
 const closeAdminPanel = document.getElementById('closeAdminPanel');
-const adminTeamsList = document.getElementById('adminTeamsList');
-const adminMaxInput = document.getElementById('adminMaxInput');
 const addTeamBtn = document.getElementById('addTeamBtn');
 const newTeamName = document.getElementById('newTeamName');
 const newTeamPwd = document.getElementById('newTeamPwd');
-
-const mainContent = document.getElementById('mainContent');
-const teamLabel = document.getElementById('teamLabel');
-const totalScoreElem = document.getElementById('totalScore');
-const maxScoreElem = document.getElementById('maxScore');
 
 // ---------------------------------------------------------------------------
 // Variables d’état
 // ---------------------------------------------------------------------------
 let authData = {};     // { "Equipe 1": "toto", "Equipe 2": "toto2", "Admin": "toto3" }
-let selectedUmas = [];
-let umas = [];
-let currentTeam = null;
-let isAdmin = false;
-let currentTotal = 0;
-let maxScore = 30;
 
 // ---------------------------------------------------------------------------
 // Chargement initial des données depuis Firebase
