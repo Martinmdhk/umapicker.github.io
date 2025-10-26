@@ -198,9 +198,9 @@
         selectedUmas.splice(index, 1);
         renderSelected();
         saveData();
-        (confirmModal);
+        hideModal(confirmModal);
       };
-      confirmCancel.onclick = () => (confirmModal);
+      confirmCancel.onclick = () => hideModal(confirmModal);
     }
 
     // RENDU SÉLECTION
@@ -240,7 +240,8 @@
 
     // On masque le contenu tant qu’on n’est pas connecté
     mainContent.classList.add('hidden');
-    
+  </script>
+  <script type="module">
 /* --------------------------------------------------------------------------
    PARTIE 2 — Gestion Firebase + logique applicative
    -------------------------------------------------------------------------- */
@@ -265,19 +266,38 @@ const db = getDatabase(app);
 // ---------------------------------------------------------------------------
 // Références DOM
 // ---------------------------------------------------------------------------
+const teamModal = document.getElementById('teamModal');
+const teamSelect = document.getElementById('teamSelect');
+const teamPasswordInput = document.getElementById('teamPasswordInput');
 const teamLogin = document.getElementById('teamLogin');
 const teamCancel = document.getElementById('teamCancel');
+const adminModal = document.getElementById('adminModal');
+const adminPasswordInput = document.getElementById('adminPasswordInput');
 const adminLogin = document.getElementById('adminLogin');
 const adminCancel = document.getElementById('adminCancel');
+const adminPanel = document.getElementById('adminPanel');
 const closeAdminPanel = document.getElementById('closeAdminPanel');
+const adminTeamsList = document.getElementById('adminTeamsList');
+const adminMaxInput = document.getElementById('adminMaxInput');
 const addTeamBtn = document.getElementById('addTeamBtn');
 const newTeamName = document.getElementById('newTeamName');
 const newTeamPwd = document.getElementById('newTeamPwd');
+
+const mainContent = document.getElementById('mainContent');
+const teamLabel = document.getElementById('teamLabel');
+const totalScoreElem = document.getElementById('totalScore');
+const maxScoreElem = document.getElementById('maxScore');
 
 // ---------------------------------------------------------------------------
 // Variables d’état
 // ---------------------------------------------------------------------------
 let authData = {};     // { "Equipe 1": "toto", "Equipe 2": "toto2", "Admin": "toto3" }
+let selectedUmas = [];
+let umas = [];
+let currentTeam = null;
+let isAdmin = false;
+let currentTotal = 0;
+let maxScore = 30;
 
 // ---------------------------------------------------------------------------
 // Chargement initial des données depuis Firebase
@@ -331,14 +351,14 @@ teamLogin.onclick = async () => {
     currentTeam = team;
     isAdmin = false;
     localStorage.setItem('uma_team', team);
-    (teamModal);
+    hideModal(teamModal);
     showMain();
     loadTeam(team);
   } else {
     alert("Mot de passe incorrect.");
   }
 };
-teamCancel.onclick = () => (teamModal);
+teamCancel.onclick = () => hideModal(teamModal);
 
 // ---------------------------------------------------------------------------
 // Connexion ADMIN
@@ -348,14 +368,14 @@ adminLogin.onclick = async () => {
   if (authData["Admin"] && authData["Admin"] === pass) {
     isAdmin = true;
     currentTeam = "Admin";
-    (adminModal);
+    hideModal(adminModal);
     showMain();
     showAdminPanel();
   } else {
     alert("Mot de passe incorrect.");
   }
 };
-adminCancel.onclick = () => (adminModal);
+adminCancel.onclick = () => hideModal(adminModal);
 
 // ---------------------------------------------------------------------------
 // ADMIN PANEL — affichage & modification des équipes
@@ -449,6 +469,9 @@ function showMain() {
   if (!isAdmin) loadTeam(currentTeam);
 }
 
+function showModal(el) { el.classList.remove('hidden', 'opacity-0'); el.classList.add('flex'); }
+function hideModal(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+
 // ---------------------------------------------------------------------------
 // Auto-connexion si déjà stockée
 // ---------------------------------------------------------------------------
@@ -463,5 +486,3 @@ initData().then(() => {
   }
 });
 </script>
-</body>
-</html>
