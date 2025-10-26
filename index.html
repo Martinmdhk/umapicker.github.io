@@ -375,73 +375,138 @@
     // ---------------------------------------------------------------------------
     // Panneau admin : gestion des équipes + édition des scores Uma
     // ---------------------------------------------------------------------------
-    function renderAdminPanel() {
-    adminTeamsList.innerHTML = '';
-    Object.entries(authData).forEach(([team, pwd]) => {
-        if (team === "Admin") return;
-        const div = document.createElement('div');
-        div.className = "flex items-center gap-2 border p-2 rounded";
-        div.innerHTML = `
-        <input type="text" value="${team}" class="team-name flex-1 border rounded p-1" />
-        <input type="password" value="${pwd}" class="team-pass flex-1 border rounded p-1" />
-        <button class="save bg-green-500 text-white px-2 py-1 rounded">💾</button>
-        <button class="delete bg-red-500 text-white px-2 py-1 rounded">🗑️</button>
-        `;
-        const saveBtn = div.querySelector('.save');
-        const delBtn = div.querySelector('.delete');
-        saveBtn.onclick = async () => {
-        const newName = div.querySelector('.team-name').value.trim();
-        const newPass = div.querySelector('.team-pass').value.trim();
-        if (!newName || !newPass) return;
-        if (newName !== team) {
-            delete authData[team];
-            authData[newName] = newPass;
-        } else {
-            authData[team] = newPass;
-        }
-        await update(ref(db, '/auth'), authData);
-        showToast("Équipe modifiée !");
-        renderAdminPanel();
-        refreshTeamSelect();
-        };
-        delBtn.onclick = async () => {
-        if (!confirm(`Supprimer ${team} ?`)) return;
+function renderAdminPanel() {
+  adminTeamsList.innerHTML = '';
+
+  // --- 🧩 Liste des équipes existantes ---
+  Object.entries(authData).forEach(([team, pwd]) => {
+    if (team === "Admin") return;
+    const div = document.createElement('div');
+    div.className = "flex items-center gap-2 border p-2 rounded";
+    div.innerHTML = `
+      <input type="text" value="${team}" class="team-name flex-1 border rounded p-1" />
+      <input type="password" value="${pwd}" class="team-pass flex-1 border rounded p-1" />
+      <button class="save bg-green-500 text-white px-2 py-1 rounded">💾</button>
+      <button class="delete bg-red-500 text-white px-2 py-1 rounded">🗑️</button>
+    `;
+
+    const saveBtn = div.querySelector('.save');
+    const delBtn = div.querySelector('.delete');
+
+    saveBtn.onclick = async () => {
+      const newName = div.querySelector('.team-name').value.trim();
+      const newPass = div.querySelector('.team-pass').value.trim();
+      if (!newName || !newPass) return;
+
+      if (newName !== team) {
+        // Renommage d'équipe
         delete authData[team];
+        authData[newName] = newPass;
+
+        // Copier les données d'équipe si existantes
+        const oldDataSnap = await get(ref(db, `/teams/${team}`));
+        if (oldDataSnap.exists()) {
+          await set(ref(db, `/teams/${newName}`), oldDataSnap.val());
+          await remove(ref(db, `/teams/${team}`));
+        }
+      } else {
+        authData[team] = newPass;
+      }
+
+      await set(ref(db, '/auth'), authData);
+      showToast("Équipe modifiée !");
+      renderAdminPanel();
+      refreshTeamSelect();
+    };
+
+    delBtn.onclick = async () => {
+      if (!confirm(`Supprimer définitivement ${team} ?`)) return;
+      delete authData[team];
+      await set(ref(db, '/auth'), authData);
+      await remove(ref(db, `/teams/${team}`));
+      showToast("Équipe supprimée !");
+      renderAdminPanel();
+      refreshTeamSelect();
+    };
+
+    adminTeamsList.appendChild(div);
+  });
+
+  // --- ➕ Formulaire d’ajout de nouvelle équipe ---
+    const addSection = document.createElement('div');
+    addSection.className = "mt-4 border-t pt-4";
+    addSection.innerHTML = `
+        <h3 class="text-lg font-bold mb-2">Ajouter une équipe</h3>
+        <div class="flex items-center gap-2 mb-2">
+        <input type="text" id="newTeamName" placeholder="Nom" class="flex-1 border rounded p-1" />
+        <input type="password" id="newTeamPwd" placeholder="Mot de passe" class="flex-1 border rounded p-1" />
+        <button id="addTeamBtn" class="bg-blue-500 text-white px-2 py-1 rounded">➕</button>
+        </div>
+    `;
+    adminTeamsList.appendChild(addSection);
+
+    // Événement d’ajout d’équipe
+    addSection.querySelector('#addTeamBtn').onclick = async () => {
+        const name = addSection.querySelector('#newTeamName').value.trim();
+        const pass = addSection.querySelector('#newTeamPwd').value.trim();
+        if (!name || !pass) return;
+
+        authData[name] = pass;
         await update(ref(db, '/auth'), authData);
-        await remove(ref(db, `/teams/${team}`));
-        showToast("Équipe supprimée !");
+        await set(ref(db, `/teams/${name}`), { selected: [], total: 0 });
+
+        addSection.querySelector('#newTeamName').value = '';
+        addSection.querySelector('#newTeamPwd').value = '';
+        showToast("Nouvelle équipe ajoutée !");
         renderAdminPanel();
         refreshTeamSelect();
-        };
-        adminTeamsList.appendChild(div);
-    });
+    };
 
-    // ⚙️ Section édition des scores Uma (corrigée)
+    // --- 🐴 Section édition des scores Uma ---
     const umaEditSection = document.createElement('div');
-    umaEditSection.className = "mt-4";
-    umaEditSection.innerHTML = "<h3 class='text-lg font-bold mb-2'>Scores Uma</h3>";
+    umaEditSection.className = "mt-6";
+    umaEditSection.innerHTML = `
+        <h3 class="text-lg font-bold mb-2">Scores Uma</h3>
+        <input type="text" id="umaSearch" placeholder="Rechercher une Uma..." class="w-full border rounded p-2 mb-3" />
+        <div id="umaListContainer"></div>
+    `;
 
-    umas.forEach((u, index) => {
-        const row = document.createElement('div');
-        row.className = "flex items-center gap-2 mb-1";
-        row.innerHTML = `
-        <span class="flex-1">${u.name}</span>
-        <input type="number" min="1" max="5" value="${u.score || 1}" class="w-16 border rounded p-1 uma-score-input" />
-        <button class="saveUma bg-green-500 text-white px-2 py-1 rounded">💾</button>
-        `;
-        row.querySelector('.saveUma').onclick = async () => {
-        const newScore = parseInt(row.querySelector('.uma-score-input').value);
-        if (isNaN(newScore) || newScore < 1) return;
+    const umaListContainer = umaEditSection.querySelector('#umaListContainer');
 
-        // ✅ mise à jour locale et sauvegarde du tableau complet
-        umas[index].score = newScore;
-        await set(ref(db, '/umas'), umas);
-        showToast(`Score de ${u.name} mis à jour`);
-        };
-        umaEditSection.appendChild(row);
-    });
+    function renderUmaList(filter = "") {
+        umaListContainer.innerHTML = "";
+        umas
+        .filter(u => u.name.toLowerCase().includes(filter.toLowerCase()))
+        .forEach((u, index) => {
+            const row = document.createElement('div');
+            row.className = "flex items-center gap-2 mb-1";
+            row.innerHTML = `
+            <span class="flex-1">${u.name}</span>
+            <input type="number" min="1" max="5" value="${u.score || 1}" class="w-16 border rounded p-1 uma-score-input" />
+            <button class="saveUma bg-green-500 text-white px-2 py-1 rounded">💾</button>
+            `;
+
+            // Sauvegarde score Uma
+            row.querySelector('.saveUma').onclick = async () => {
+            const newScore = parseInt(row.querySelector('.uma-score-input').value);
+            if (isNaN(newScore) || newScore < 1) return;
+            umas[index].score = newScore;
+            await set(ref(db, '/umas'), umas);
+            showToast(`Score de ${u.name} mis à jour`);
+            };
+
+            umaListContainer.appendChild(row);
+        });
+    }
+
+    renderUmaList();
+    umaEditSection.querySelector('#umaSearch').oninput = e => {
+        renderUmaList(e.target.value);
+    };
 
     adminTeamsList.appendChild(umaEditSection);
+
+    // --- Score max global ---
     adminMaxInput.value = maxScore;
     }
 
