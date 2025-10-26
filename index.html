@@ -306,29 +306,6 @@
       });
     }
 
-    async function updateTotalForAllTeams(umaId) {
-    const teamsSnap = await get(ref(db, '/teams'));
-    const teams = teamsSnap.val() || {};
-
-    for (const [teamName, teamData] of Object.entries(teams)) {
-      let newTotal = 0;
-      if (teamData.selected && teamData.selected.length) {
-        teamData.selected.forEach(selUma => {
-          const u = umas.find(u => u.id === selUma.id);
-          if (u && u.score) newTotal += u.score;
-        });
-      }
-      await update(ref(db, `/teams/${teamName}`), { total: newTotal });
-    }
-
-    // Si tu affiches le total pour l’équipe courante, le mettre à jour aussi
-    if (currentTeam && !isAdmin) {
-      currentTotal = teams[currentTeam]?.total || 0;
-      totalScoreElem.textContent = `${currentTotal} / ${maxScore}`;
-      totalScoreElem.classList.toggle('text-red-500', currentTotal > maxScore);
-      totalScoreElem.classList.toggle('text-green-500', currentTotal <= maxScore);
-    }
-  }
 
     // ---------------------------------------------------------------------------
     // Connexion ÉQUIPE
@@ -499,7 +476,6 @@
             if (isNaN(newScore) || newScore < 1) return;
             umas[index].score = newScore;
             await set(ref(db, '/umas'), umas);
-            await updateTotalForAllTeams(u.id);
             showToast(`Score de ${u.name} mis à jour`);
             };
 
