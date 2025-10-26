@@ -361,8 +361,7 @@
     const pass = adminPasswordInput.value;
     if (authData["Admin"] && authData["Admin"] === pass) {
         isAdmin = true;
-        currentTeam = "Admin";
-        localStorage.setItem('uma_team', "Admin");
+        localStorage.setItem('isadmin', "Admin");
         localStorage.setItem('admin_pass', pass);
         hideModal(adminModal);
         showMain();
@@ -380,7 +379,7 @@
     function renderAdminPanel() {
     adminTeamsList.innerHTML = '';
     Object.entries(authData).forEach(([team, pwd]) => {
-        if (team === "Admin") return;
+        if (isAdmin) return;
         const div = document.createElement('div');
         div.className = "flex items-center gap-2 border p-2 rounded";
         div.innerHTML = `
