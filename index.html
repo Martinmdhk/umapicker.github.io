@@ -310,14 +310,15 @@
         if (isAdmin) renderAdminPanel();
         
         const savedTeam = localStorage.getItem('uma_team');
+        const adminPass = localStorage.getItem('admin_pass');
         const savedPass = localStorage.getItem('uma_pass');
         if (!currentTeam && savedTeam && savedPass && authData[savedTeam] === savedPass) {
         currentTeam = savedTeam;
-        isAdmin = (savedTeam === "Admin");
+        isAdmin = (adminPass === "Admin");
         hideModal(teamModal);
         hideModal(adminModal);
         showMain();
-        loadTeam(currentTeam);
+        if (!isAdmin) loadTeam(currentTeam);
         }
       });
     }
@@ -342,6 +343,7 @@
         currentTeam = team;
         isAdmin = false;
         localStorage.setItem('uma_team', team);
+        localStorage.setItem('uma_pass', pass);
         hideModal(teamModal);
         showMain();
         loadTeam(team);
@@ -361,7 +363,7 @@
         isAdmin = true;
         currentTeam = "Admin";
         localStorage.setItem('uma_team', "Admin");
-        localStorage.setItem('uma_pass', pass);
+        localStorage.setItem('admin_pass', pass);
         hideModal(adminModal);
         showMain();
         showAdminPanel();
