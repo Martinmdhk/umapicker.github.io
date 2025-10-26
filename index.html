@@ -68,10 +68,10 @@
     </div>
   </div>
 
-  <!-- Nom personnalisé -->
+  <!-- Pseudo -->
   <div id="nameModal" class="fixed inset-0 bg-black/40 hidden items-center justify-center z-50">
     <div class="bg-white rounded-xl shadow-lg w-80 p-6 text-center">
-      <h2 class="text-lg font-bold mb-3 text-pink-600">Donnez un nom personnalisé</h2>
+      <h2 class="text-lg font-bold mb-3 text-pink-600">Pseudo du joueur</h2>
       <input id="customNameInput" type="text" placeholder="Nom" class="border rounded p-2 w-full mb-4" />
       <div class="flex justify-end gap-2">
         <button id="nameCancel" class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300">Annuler</button>
@@ -126,18 +126,17 @@
     
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
   import { getDatabase, ref, get, set, update, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
-    // Contiendra les hooks de la Partie 2
-    window.__uiHooks = {};
 
+    window.__uiHooks = {};
+    let authData = {};
     let umas = [];
     let selectedUmas = [];
     let currentTeam = null;
     let isAdmin = false;
     let currentTotal = 0;
     let maxScore = 30;
-    let authData = {};
 
-    // RÉFÉRENCES DOM
+    // Variables
     const mainContent = document.getElementById('mainContent');
     const umaList = document.getElementById('umaList');
     const selectedList = document.getElementById('selectedList');
@@ -164,7 +163,6 @@
     const newTeamName = document.getElementById('newTeamName');
     const newTeamPwd = document.getElementById('newTeamPwd');
 
-    
     // ---------------------------------------------------------------------------
     // Toast visuel
     // ---------------------------------------------------------------------------
@@ -178,7 +176,7 @@
     }
 
 
-    /* ⚙️ CONFIG FIREBASE — à personnaliser avec tes propres infos */
+    /* ⚙️ CONFIG FIREBASE */
     const firebaseConfig = {
       apiKey: "AIzaSyCKZBpYvgkTs-273GS9PHV9YIjlX6lIwKI",
       authDomain: "uma-selector-bdc59.firebaseapp.com",
@@ -192,11 +190,11 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Fonction utilitaire d'affichage de modale
+    // Affichage de modale
     function showModal(el) { el.classList.remove('hidden', 'opacity-0'); el.classList.add('flex'); }
     function hideModal(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 
-    // RENDU LISTE UMA
+    // LISTE UMA
     function renderList(filter = '') {
       umaList.innerHTML = '';
       umas.filter(u => u.name.toLowerCase().includes(filter.toLowerCase()))
@@ -269,7 +267,7 @@
 
     searchInput.oninput = e => renderList(e.target.value);
 
-    // Hooks utilisés par la Partie 2
+    // Hooks
     window.__uiHooks.renderSelected = renderSelected;
     window.__uiHooks.renderUmaList = () => renderList(searchInput.value);
     window.__uiHooks.setUmas = u => { umas = u; renderList(searchInput.value); };
@@ -310,6 +308,18 @@
         if (window.__uiHooks?.setUmas) window.__uiHooks.setUmas(umas);
         refreshTeamSelect();
         if (isAdmin) renderAdminPanel();
+        
+        const savedTeam = localStorage.getItem('uma_team');
+        const savedPass = localStorage.getItem('uma_pass');
+        if (!currentTeam && savedTeam && savedPass && authData[savedTeam] === savedPass) {
+        currentTeam = savedTeam;
+        isAdmin = (savedTeam === "Admin");
+        hideModal(teamModal);
+        hideModal(adminModal);
+        showMain();
+        if (!isAdmin) loadTeam(currentTeam);
+        }
+
       });
     }
 
@@ -347,22 +357,24 @@
     // Connexion ADMIN
     // ---------------------------------------------------------------------------
     adminLogin.onclick = async () => {
-      const pass = adminPasswordInput.value;
-      if (authData["Admin"] && authData["Admin"] === pass) {
+    const pass = adminPasswordInput.value;
+    if (authData["Admin"] && authData["Admin"] === pass) {
         isAdmin = true;
         currentTeam = "Admin";
+        localStorage.setItem('uma_team', "Admin");
+        localStorage.setItem('uma_pass', pass);
         hideModal(adminModal);
         showMain();
         showAdminPanel();
         showToast("Mode administrateur activé");
-        } else {
-            showToast("Mot de passe incorrect.");
-        }
+    } else {
+        showToast("Mot de passe incorrect.");
+    }
     };
     adminCancel.onclick = () => hideModal(adminModal);
 
     // ---------------------------------------------------------------------------
-    // ADMIN PANEL — affichage & modification des équipes
+    // Panneau admin : gestion des équipes + édition des scores Uma
     // ---------------------------------------------------------------------------
     function renderAdminPanel() {
     adminTeamsList.innerHTML = '';
@@ -404,6 +416,32 @@
         };
         adminTeamsList.appendChild(div);
     });
+
+    // ⚙️ Édition des scores Uma (nouvelle section admin)
+    const umaEditSection = document.createElement('div');
+    umaEditSection.className = "mt-4";
+    umaEditSection.innerHTML = "<h3 class='text-lg font-bold mb-2'>Scores Uma</h3>";
+
+    umas.forEach(u => {
+        const row = document.createElement('div');
+        row.className = "flex items-center gap-2 mb-1";
+        row.innerHTML = `
+        <span class="flex-1">${u.name}</span>
+        <input type="number" min="1" max="5" value="${u.score || 1}" class="w-16 border rounded p-1 uma-score-input" />
+        <button class="saveUma bg-green-500 text-white px-2 py-1 rounded">💾</button>
+        `;
+        row.querySelector('.saveUma').onclick = async () => {
+        const newScore = parseInt(row.querySelector('.uma-score-input').value);
+        if (isNaN(newScore) || newScore < 1) return;
+        u.score = newScore;
+        await update(ref(db, `/umas/${u.id}`), { score: newScore });
+        showToast(`Score de ${u.name} mis à jour`);
+        };
+        umaEditSection.appendChild(row);
+    });
+
+    adminTeamsList.appendChild(umaEditSection);
+
     adminMaxInput.value = maxScore;
     }
 
@@ -429,8 +467,8 @@
     }
     };
 
-function showAdminPanel() { showModal(adminPanel); renderAdminPanel(); }
-closeAdminPanel.onclick = () => hideModal(adminPanel);
+    function showAdminPanel() { showModal(adminPanel); renderAdminPanel(); }
+    closeAdminPanel.onclick = () => hideModal(adminPanel);
 
     // ---------------------------------------------------------------------------
     // Sauvegarde sélection équipe
@@ -469,16 +507,5 @@ closeAdminPanel.onclick = () => hideModal(adminPanel);
     // ---------------------------------------------------------------------------
     // Auto-connexion si déjà stockée
     // ---------------------------------------------------------------------------
-    initData().then(() => {
-    const savedTeam = localStorage.getItem('uma_team');
-    const savedPass = localStorage.getItem('uma_pass');
-    if (savedTeam && savedPass && authData[savedTeam] === savedPass) {
-        currentTeam = savedTeam;
-        isAdmin = (savedTeam === "Admin");
-        showMain();
-        if (!isAdmin) loadTeam(currentTeam);
-    } else {
-        showModal(teamModal);
-    }
-    });
+    initData();
 </script>
