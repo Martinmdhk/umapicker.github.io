@@ -276,6 +276,14 @@
     // ---------------------------------------------------------------------------
     async function initData() {
       const snapshot = await get(ref(db, '/'));
+      if (!snapshot.exists()) {
+        await set(ref(db, '/'), {
+          auth: { "Equipe 1": "toto", "Equipe 2": "toto2", "Admin": "toto3" },
+          teams: { "Equipe 1": { selected: [], total: 0 }, "Equipe 2": { selected: [], total: 0 } },
+          settings: { maxScore: 30 },
+          umas: []
+        });
+      }
       listenData();
     }
 
