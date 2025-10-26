@@ -123,6 +123,9 @@
 
   <!-- SCRIPT PRINCIPAL -->
   <script type="module">
+    
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getDatabase, ref, get, set, update, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
     // Contiendra les hooks de la Partie 2
     window.__uiHooks = {};
 
@@ -132,6 +135,7 @@
     let isAdmin = false;
     let currentTotal = 0;
     let maxScore = 30;
+    let authData = {};
 
     // RÉFÉRENCES DOM
     const mainContent = document.getElementById('mainContent');
@@ -151,6 +155,28 @@
     const adminPanel = document.getElementById('adminPanel');
     const adminTeamsList = document.getElementById('adminTeamsList');
     const adminMaxInput = document.getElementById('adminMaxInput');
+    const teamLogin = document.getElementById('teamLogin');
+    const teamCancel = document.getElementById('teamCancel');
+    const adminLogin = document.getElementById('adminLogin');
+    const adminCancel = document.getElementById('adminCancel');
+    const closeAdminPanel = document.getElementById('closeAdminPanel');
+    const addTeamBtn = document.getElementById('addTeamBtn');
+    const newTeamName = document.getElementById('newTeamName');
+    const newTeamPwd = document.getElementById('newTeamPwd');
+
+    /* ⚙️ CONFIG FIREBASE — à personnaliser avec tes propres infos */
+    const firebaseConfig = {
+      apiKey: "AIzaSyCKZBpYvgkTs-273GS9PHV9YIjlX6lIwKI",
+      authDomain: "uma-selector-bdc59.firebaseapp.com",
+      databaseURL: "https://uma-selector-bdc59-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "uma-selector-bdc59",
+      storageBucket: "uma-selector-bdc59.firebasestorage.app",
+      messagingSenderId: "204929164113",
+      appId: "1:204929164113:web:af408125a77c437a3f2970"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
     // Fonction utilitaire d'affichage de modale
     function showModal(el) { el.classList.remove('hidden', 'opacity-0'); el.classList.add('flex'); }
@@ -240,249 +266,191 @@
 
     // On masque le contenu tant qu’on n’est pas connecté
     mainContent.classList.add('hidden');
-  </script>
-  <script type="module">
-/* --------------------------------------------------------------------------
-   PARTIE 2 — Gestion Firebase + logique applicative
-   -------------------------------------------------------------------------- */
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getDatabase, ref, get, set, update, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
-
-/* ⚙️ CONFIG FIREBASE — à personnaliser avec tes propres infos */
-const firebaseConfig = {
-  apiKey: "AIzaSyCKZBpYvgkTs-273GS9PHV9YIjlX6lIwKI",
-  authDomain: "uma-selector-bdc59.firebaseapp.com",
-  databaseURL: "https://uma-selector-bdc59-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "uma-selector-bdc59",
-  storageBucket: "uma-selector-bdc59.firebasestorage.app",
-  messagingSenderId: "204929164113",
-  appId: "1:204929164113:web:af408125a77c437a3f2970"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-// ---------------------------------------------------------------------------
-// Références DOM
-// ---------------------------------------------------------------------------
-const teamModal = document.getElementById('teamModal');
-const teamSelect = document.getElementById('teamSelect');
-const teamPasswordInput = document.getElementById('teamPasswordInput');
-const teamLogin = document.getElementById('teamLogin');
-const teamCancel = document.getElementById('teamCancel');
-const adminModal = document.getElementById('adminModal');
-const adminPasswordInput = document.getElementById('adminPasswordInput');
-const adminLogin = document.getElementById('adminLogin');
-const adminCancel = document.getElementById('adminCancel');
-const adminPanel = document.getElementById('adminPanel');
-const closeAdminPanel = document.getElementById('closeAdminPanel');
-const adminTeamsList = document.getElementById('adminTeamsList');
-const adminMaxInput = document.getElementById('adminMaxInput');
-const addTeamBtn = document.getElementById('addTeamBtn');
-const newTeamName = document.getElementById('newTeamName');
-const newTeamPwd = document.getElementById('newTeamPwd');
-
-const mainContent = document.getElementById('mainContent');
-const teamLabel = document.getElementById('teamLabel');
-const totalScoreElem = document.getElementById('totalScore');
-const maxScoreElem = document.getElementById('maxScore');
-
-// ---------------------------------------------------------------------------
-// Variables d’état
-// ---------------------------------------------------------------------------
-let authData = {};     // { "Equipe 1": "toto", "Equipe 2": "toto2", "Admin": "toto3" }
-let selectedUmas = [];
-let umas = [];
-let currentTeam = null;
-let isAdmin = false;
-let currentTotal = 0;
-let maxScore = 30;
-
-// ---------------------------------------------------------------------------
-// Chargement initial des données depuis Firebase
-// ---------------------------------------------------------------------------
-async function initData() {
-  const snapshot = await get(ref(db, '/'));
-  if (!snapshot.exists()) {
-    await set(ref(db, '/'), {
-      auth: { "Equipe 1": "toto", "Equipe 2": "toto2", "Admin": "toto3" },
-      teams: { "Equipe 1": { selected: [], total: 0 }, "Equipe 2": { selected: [], total: 0 } },
-      settings: { maxScore: 30 },
-      umas: []
-    });
-  }
-  listenData();
-}
-
-// Synchronisation en temps réel
-function listenData() {
-  onValue(ref(db, '/'), snap => {
-    const data = snap.val() || {};
-    authData = data.auth || {};
-    maxScore = data.settings?.maxScore || 30;
-    umas = data.umas || [];
-
-    // Rafraîchir interface
-    maxScoreElem.textContent = maxScore;
-    if (window.__uiHooks?.setUmas) window.__uiHooks.setUmas(umas);
-    refreshTeamSelect();
-    if (isAdmin) renderAdminPanel();
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Connexion ÉQUIPE
-// ---------------------------------------------------------------------------
-function refreshTeamSelect() {
-  teamSelect.innerHTML = '';
-  Object.keys(authData).filter(t => t !== "Admin").forEach(t => {
-    const opt = document.createElement('option');
-    opt.value = t;
-    opt.textContent = t;
-    teamSelect.appendChild(opt);
-  });
-}
-
-teamLogin.onclick = async () => {
-  const team = teamSelect.value;
-  const pass = teamPasswordInput.value;
-  if (authData[team] && authData[team] === pass) {
-    currentTeam = team;
-    isAdmin = false;
-    localStorage.setItem('uma_team', team);
-    hideModal(teamModal);
-    showMain();
-    loadTeam(team);
-  } else {
-    alert("Mot de passe incorrect.");
-  }
-};
-teamCancel.onclick = () => hideModal(teamModal);
-
-// ---------------------------------------------------------------------------
-// Connexion ADMIN
-// ---------------------------------------------------------------------------
-adminLogin.onclick = async () => {
-  const pass = adminPasswordInput.value;
-  if (authData["Admin"] && authData["Admin"] === pass) {
-    isAdmin = true;
-    currentTeam = "Admin";
-    hideModal(adminModal);
-    showMain();
-    showAdminPanel();
-  } else {
-    alert("Mot de passe incorrect.");
-  }
-};
-adminCancel.onclick = () => hideModal(adminModal);
-
-// ---------------------------------------------------------------------------
-// ADMIN PANEL — affichage & modification des équipes
-// ---------------------------------------------------------------------------
-function renderAdminPanel() {
-  adminTeamsList.innerHTML = '';
-  Object.entries(authData).forEach(([team, pwd]) => {
-    if (team === "Admin") return;
-    const div = document.createElement('div');
-    div.className = "flex items-center gap-2 border p-2 rounded";
-    div.innerHTML = `
-      <input type="text" value="${team}" class="team-name flex-1 border rounded p-1" />
-      <input type="password" value="${pwd}" class="team-pass flex-1 border rounded p-1" />
-      <button class="save bg-green-500 text-white px-2 py-1 rounded">💾</button>
-    `;
-    const saveBtn = div.querySelector('.save');
-    saveBtn.onclick = async () => {
-      const newName = div.querySelector('.team-name').value.trim();
-      const newPass = div.querySelector('.team-pass').value.trim();
-      if (!newName || !newPass) return;
-      // Supprimer l’ancienne clé et recréer si le nom change
-      if (newName !== team) {
-        delete authData[team];
-        authData[newName] = newPass;
-      } else {
-        authData[team] = newPass;
+    // ---------------------------------------------------------------------------
+    // Chargement initial des données depuis Firebase
+    // ---------------------------------------------------------------------------
+    async function initData() {
+      const snapshot = await get(ref(db, '/'));
+      if (!snapshot.exists()) {
+        await set(ref(db, '/'), {
+          auth: { "Equipe 1": "toto", "Equipe 2": "toto2", "Admin": "toto3" },
+          teams: { "Equipe 1": { selected: [], total: 0 }, "Equipe 2": { selected: [], total: 0 } },
+          settings: { maxScore: 30 },
+          umas: []
+        });
       }
+      listenData();
+    }
+
+    // Synchronisation en temps réel
+    function listenData() {
+      onValue(ref(db, '/'), snap => {
+        const data = snap.val() || {};
+        authData = data.auth || {};
+        maxScore = data.settings?.maxScore || 30;
+        umas = data.umas || [];
+
+        // Rafraîchir interface
+        maxScoreElem.textContent = maxScore;
+        if (window.__uiHooks?.setUmas) window.__uiHooks.setUmas(umas);
+        refreshTeamSelect();
+        if (isAdmin) renderAdminPanel();
+      });
+    }
+
+    // ---------------------------------------------------------------------------
+    // Connexion ÉQUIPE
+    // ---------------------------------------------------------------------------
+    function refreshTeamSelect() {
+      teamSelect.innerHTML = '';
+      Object.keys(authData).filter(t => t !== "Admin").forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        teamSelect.appendChild(opt);
+      });
+    }
+
+    teamLogin.onclick = async () => {
+      const team = teamSelect.value;
+      const pass = teamPasswordInput.value;
+      if (authData[team] && authData[team] === pass) {
+        currentTeam = team;
+        isAdmin = false;
+        localStorage.setItem('uma_team', team);
+        hideModal(teamModal);
+        showMain();
+        loadTeam(team);
+      } else {
+        alert("Mot de passe incorrect.");
+      }
+    };
+    teamCancel.onclick = () => hideModal(teamModal);
+
+    // ---------------------------------------------------------------------------
+    // Connexion ADMIN
+    // ---------------------------------------------------------------------------
+    adminLogin.onclick = async () => {
+      const pass = adminPasswordInput.value;
+      if (authData["Admin"] && authData["Admin"] === pass) {
+        isAdmin = true;
+        currentTeam = "Admin";
+        hideModal(adminModal);
+        showMain();
+        showAdminPanel();
+      } else {
+        alert("Mot de passe incorrect.");
+      }
+    };
+    adminCancel.onclick = () => hideModal(adminModal);
+
+    // ---------------------------------------------------------------------------
+    // ADMIN PANEL — affichage & modification des équipes
+    // ---------------------------------------------------------------------------
+    function renderAdminPanel() {
+      adminTeamsList.innerHTML = '';
+      Object.entries(authData).forEach(([team, pwd]) => {
+        if (team === "Admin") return;
+        const div = document.createElement('div');
+        div.className = "flex items-center gap-2 border p-2 rounded";
+        div.innerHTML = `
+          <input type="text" value="${team}" class="team-name flex-1 border rounded p-1" />
+          <input type="password" value="${pwd}" class="team-pass flex-1 border rounded p-1" />
+          <button class="save bg-green-500 text-white px-2 py-1 rounded">💾</button>
+        `;
+        const saveBtn = div.querySelector('.save');
+        saveBtn.onclick = async () => {
+          const newName = div.querySelector('.team-name').value.trim();
+          const newPass = div.querySelector('.team-pass').value.trim();
+          if (!newName || !newPass) return;
+          // Supprimer l’ancienne clé et recréer si le nom change
+          if (newName !== team) {
+            delete authData[team];
+            authData[newName] = newPass;
+          } else {
+            authData[team] = newPass;
+          }
+          await update(ref(db, '/auth'), authData);
+          renderAdminPanel();
+          refreshTeamSelect();
+        };
+        adminTeamsList.appendChild(div);
+      });
+      adminMaxInput.value = maxScore;
+    }
+
+    addTeamBtn.onclick = async () => {
+      const name = newTeamName.value.trim();
+      const pass = newTeamPwd.value.trim();
+      if (!name || !pass) return;
+      authData[name] = pass;
       await update(ref(db, '/auth'), authData);
+      newTeamName.value = '';
+      newTeamPwd.value = '';
       renderAdminPanel();
       refreshTeamSelect();
     };
-    adminTeamsList.appendChild(div);
-  });
-  adminMaxInput.value = maxScore;
-}
 
-addTeamBtn.onclick = async () => {
-  const name = newTeamName.value.trim();
-  const pass = newTeamPwd.value.trim();
-  if (!name || !pass) return;
-  authData[name] = pass;
-  await update(ref(db, '/auth'), authData);
-  newTeamName.value = '';
-  newTeamPwd.value = '';
-  renderAdminPanel();
-  refreshTeamSelect();
-};
+    adminMaxInput.onchange = async () => {
+      const newMax = parseInt(adminMaxInput.value);
+      if (!isNaN(newMax)) {
+        maxScore = newMax;
+        await update(ref(db, '/settings'), { maxScore: newMax });
+      }
+    };
 
-adminMaxInput.onchange = async () => {
-  const newMax = parseInt(adminMaxInput.value);
-  if (!isNaN(newMax)) {
-    maxScore = newMax;
-    await update(ref(db, '/settings'), { maxScore: newMax });
-  }
-};
+    function showAdminPanel() { showModal(adminPanel); renderAdminPanel(); }
+    closeAdminPanel.onclick = () => hideModal(adminPanel);
 
-function showAdminPanel() { showModal(adminPanel); renderAdminPanel(); }
-closeAdminPanel.onclick = () => hideModal(adminPanel);
+    // ---------------------------------------------------------------------------
+    // Sauvegarde sélection équipe
+    // ---------------------------------------------------------------------------
+    async function saveData() {
+      if (!currentTeam || isAdmin) return;
+      await update(ref(db, `/teams/${currentTeam}`), {
+        selected: selectedUmas,
+        total: currentTotal
+      });
+    }
 
-// ---------------------------------------------------------------------------
-// Sauvegarde sélection équipe
-// ---------------------------------------------------------------------------
-async function saveData() {
-  if (!currentTeam || isAdmin) return;
-  await update(ref(db, `/teams/${currentTeam}`), {
-    selected: selectedUmas,
-    total: currentTotal
-  });
-}
+    // Chargement des données d’équipe
+    async function loadTeam(team) {
+      const snap = await get(ref(db, `/teams/${team}`));
+      if (snap.exists()) {
+        const data = snap.val();
+        selectedUmas = data.selected || [];
+        currentTotal = data.total || 0;
+        if (window.__uiHooks?.renderSelected) window.__uiHooks.renderSelected();
+      } else {
+        selectedUmas = [];
+        currentTotal = 0;
+      }
+    }
 
-// Chargement des données d’équipe
-async function loadTeam(team) {
-  const snap = await get(ref(db, `/teams/${team}`));
-  if (snap.exists()) {
-    const data = snap.val();
-    selectedUmas = data.selected || [];
-    currentTotal = data.total || 0;
-    if (window.__uiHooks?.renderSelected) window.__uiHooks.renderSelected();
-  } else {
-    selectedUmas = [];
-    currentTotal = 0;
-  }
-}
+    // ---------------------------------------------------------------------------
+    // Helpers interface
+    // ---------------------------------------------------------------------------
+    function showMain() {
+      teamLabel.textContent = isAdmin ? "Admin" : `Équipe : ${currentTeam}`;
+      mainContent.classList.remove('hidden');
+      if (!isAdmin) loadTeam(currentTeam);
+    }
 
-// ---------------------------------------------------------------------------
-// Helpers interface
-// ---------------------------------------------------------------------------
-function showMain() {
-  teamLabel.textContent = isAdmin ? "Admin" : `Équipe : ${currentTeam}`;
-  mainContent.classList.remove('hidden');
-  if (!isAdmin) loadTeam(currentTeam);
-}
+    function showModal(el) { el.classList.remove('hidden', 'opacity-0'); el.classList.add('flex'); }
+    function hideModal(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 
-function showModal(el) { el.classList.remove('hidden', 'opacity-0'); el.classList.add('flex'); }
-function hideModal(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
-
-// ---------------------------------------------------------------------------
-// Auto-connexion si déjà stockée
-// ---------------------------------------------------------------------------
-initData().then(() => {
-  const saved = localStorage.getItem('uma_team');
-  if (saved && saved !== "Admin" && authData[saved]) {
-    currentTeam = saved;
-    showMain();
-    loadTeam(saved);
-  } else {
-    showModal(teamModal);
-  }
-});
+    // ---------------------------------------------------------------------------
+    // Auto-connexion si déjà stockée
+    // ---------------------------------------------------------------------------
+    initData().then(() => {
+      const saved = localStorage.getItem('uma_team');
+      if (saved && saved !== "Admin" && authData[saved]) {
+        currentTeam = saved;
+        showMain();
+        loadTeam(saved);
+      } else {
+        showModal(teamModal);
+      }
+    });
 </script>
