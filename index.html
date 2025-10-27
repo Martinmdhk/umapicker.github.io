@@ -104,12 +104,12 @@
       <div class="border-t pt-4">
         <h3 class="font-semibold text-gray-700 mb-2">Gestion des équipes</h3>
         <div id="adminTeamsList" class="flex-1 overflow-y-auto pr-2"></div>
+        <div class="flex justify-end mt-6">
+          <button id="closeAdminPanel"
+                  class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-lg">Fermer</button>
+        </div>
       </div>
 
-      <div class="flex justify-end mt-6">
-        <button id="closeAdminPanel"
-                class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-lg">Fermer</button>
-      </div>
     </div>
   </div>
 
@@ -472,7 +472,7 @@
 
     // --- 🐴 Section édition des scores Uma ---
     const umaEditSection = document.createElement('div');
-    umaEditSection.className = "bg-white w-11/12 max-w-4xl rounded-2xl shadow-lg p-4 flex flex-col max-h-[90vh] overflow-hidden";
+    umaEditSection.className = "bg-white max-w-4xl rounded-2xl shadow-lg p-4 flex flex-col max-h-[90vh] overflow-auto";
     umaEditSection.innerHTML = `
         <h3 class="text-lg font-bold mb-2">Scores Uma</h3>
         <input type="text" id="umaSearch" placeholder="Rechercher une Uma..." class="w-full border rounded p-2 mb-3" />
@@ -490,7 +490,7 @@
             row.className = "flex items-center gap-2 mb-1";
             row.innerHTML = `
             <span class="flex-1">${u.name}</span>
-            <input type="number" min="1" max="30" value="${u.score || 1}" class="w-16 border rounded p-1 uma-score-input" />
+            <input type="number" min="0" max="30" value="${u.score || 0}" class="w-16 border rounded p-1 uma-score-input" />
             <button class="saveUma bg-green-500 text-white px-2 py-1 rounded">💾</button>
             `;
 
