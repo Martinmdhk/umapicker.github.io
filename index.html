@@ -266,7 +266,14 @@
 
     // Boutons connexion
     changeTeamBtn.onclick = () => showModal(teamModal);
-    adminBtn.onclick = () => showModal(adminModal);
+    adminBtn.onclick = () => {
+      if(!isAdmin) {
+        showModal(adminModal)
+      }
+      else {
+        showAdminPanel()
+      }
+    };
 
     // On masque le contenu tant qu’on n’est pas connecté
     mainContent.classList.add('hidden');
@@ -324,7 +331,6 @@
       const pass = teamPasswordInput.value;
       if (authData[team] && authData[team] === pass) {
         currentTeam = team;
-        isAdmin = false;
         localStorage.setItem('uma_team', team);
         localStorage.setItem('uma_pass', pass);
         hideModal(teamModal);
@@ -510,7 +516,7 @@
     // Sauvegarde sélection équipe
     // ---------------------------------------------------------------------------
     async function saveData() {
-      if (!currentTeam || isAdmin) return;
+      if (!currentTeam) return;
       await update(ref(db, `/teams/${currentTeam}`), {
         selected: selectedUmas,
         total: currentTotal
@@ -537,7 +543,7 @@
     function showMain() {
       teamLabel.textContent = `Équipe : ${currentTeam}`;
       mainContent.classList.remove('hidden');
-      if (!isAdmin) loadTeam(currentTeam);
+      loadTeam(currentTeam);
     }
 
     // ---------------------------------------------------------------------------
