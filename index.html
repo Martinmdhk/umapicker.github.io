@@ -472,11 +472,11 @@
 
     // --- 🐴 Section édition des scores Uma ---
     const umaEditSection = document.createElement('div');
-    umaEditSection.className = "mt-6";
+    umaEditSection.className = "bg-white w-11/12 max-w-4xl rounded-2xl shadow-lg p-4 flex flex-col max-h-[90vh] overflow-hidden";
     umaEditSection.innerHTML = `
         <h3 class="text-lg font-bold mb-2">Scores Uma</h3>
         <input type="text" id="umaSearch" placeholder="Rechercher une Uma..." class="w-full border rounded p-2 mb-3" />
-        <div id="umaListContainer" class="bg-white w-11/12 max-w-4xl rounded-2xl shadow-lg p-4 flex flex-col max-h-[90vh] overflow-hidden"></div>
+        <div id="umaListContainer" class=></div>
     `;
 
     const umaListContainer = umaEditSection.querySelector('#umaListContainer');
